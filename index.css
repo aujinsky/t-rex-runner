@@ -27,7 +27,7 @@ html, body {
 
 /* Offline page */
 
-.offline .interstitial-wrapper {
+.offline .interstitial-wrapper1 {
   color: #2b2b2b;
   font-size: 1em;
   line-height: 1.55;
@@ -37,7 +37,26 @@ html, body {
   width: 100%;
 }
 
-.offline .runner-container {
+.offline .interstitial-wrapper2 {
+  color: #2b2b2b;
+  font-size: 1em;
+  line-height: 1.55;
+  margin: 0 auto;
+  max-width: 600px;
+  padding-top: 400px;
+  width: 100%;
+}
+
+.offline .runner-container1 {
+  height: 150px;
+  max-width: 600px;
+  overflow: hidden;
+  position: absolute;
+  top: 350px;
+  width: 44px;
+}
+
+.offline .runner-container2 {
   height: 150px;
   max-width: 600px;
   overflow: hidden;
@@ -89,7 +108,10 @@ html, body {
   .icon-offline {
     margin: 0 0 10px;
   }
-  .interstitial-wrapper {
+  .interstitial-wrapper1 {
+    margin-top: 5%;
+  }
+  .interstitial-wrapper2 {
     margin-top: 5%;
   }
   .nav-wrapper {
@@ -98,21 +120,31 @@ html, body {
 }
 
 @media (min-width: 600px) and (max-width: 736px) and (orientation: landscape) {
-  .offline .interstitial-wrapper {
+  .offline .interstitial-wrapper1 {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .offline .interstitial-wrapper2 {
     margin-left: 0;
     margin-right: 0;
   }
 }
 
 @media (min-width: 420px) and (max-width: 736px) and (min-height: 240px) and (max-height: 420px) and (orientation:landscape) {
-  .interstitial-wrapper {
+  .interstitial-wrapper1 {
     margin-bottom: 100px;
+  }
+  .interstitial-wrapper2 {
+    margin-bottom: 50px;
   }
 }
 
 @media (min-height: 240px) and (orientation: landscape) {
-  .offline .interstitial-wrapper {
+  .offline .interstitial-wrapper1 {
     margin-bottom: 90px;
+  }
+  .offline .interstitial-wrapper2 {
+    margin-bottom: 40px;
   }
   .icon-offline {
     margin-bottom: 20px;
@@ -123,14 +155,21 @@ html, body {
   .icon-offline {
     margin-bottom: 0;
   }
-  .offline .runner-container {
+  .offline .runner-container1 {
     top: 10px;
+  }
+  .offline .runner-container2 {
+    top: 150px;
   }
 }
 
 @media (max-width: 240px) {
-  .interstitial-wrapper {
+  .interstitial-wrapper1 {
     overflow: inherit;
     padding: 0 8px;
+  }
+  .interstitial-wrapper2 {
+    overflow: inherit;
+    padding: 0 20px;
   }
 }

@@ -5,42 +5,165 @@
 (function () {
     'use strict';
     /**
+     * Player specific things are defined here.
+     */
+    function Player() {
+    }
+    Player.prototype = {
+        init: function(runner, player_no) {
+            this.player_no = player_no
+            console.log(player_no);
+            this.runner = runner;
+            this.outerContainerEl = this.runner.outerContainerEl[this.player_no];
+            this.containerEl = document.createElement('div');
+            var stant = player_no + 1;
+            this.containerEl.className = Runner.classes.CONTAINER + stant;
+            // Player canvas container.
+            this.canvas = createCanvas(this.containerEl, this.runner.dimensions.WIDTH,
+            this.runner.dimensions.HEIGHT, Runner.classes.PLAYER);
+
+            this.canvasCtx = this.canvas.getContext('2d');
+            this.canvasCtx.fillStyle = '#f7f7f7';
+            this.canvasCtx.fill();
+            Runner.updateCanvasScaling(this.canvas);
+
+            // Horizon contains clouds, obstacles and the ground.
+            this.horizon = new Horizon(this.canvas, this.runner.spriteDef, this.runner.dimensions,
+                this.runner.config.GAP_COEFFICIENT);
+
+            // Distance meter
+            this.distanceMeter = new DistanceMeter(this.canvas,
+                this.runner.spriteDef.TEXT_SPRITE, this.runner.dimensions.WIDTH);
+
+            // Draw t-rex
+            this.tRex = new Trex(this.canvas, this.runner.spriteDef.TREX);
+            this.outerContainerEl.appendChild(this.containerEl)
+        },
+        /**
+         * Debounce the resize event.
+         */
+        debounceResize: function () {
+            if (!this.resizeTimerId_) {
+                this.resizeTimerId_ =
+                    setInterval(this.adjustDimensions.bind(this), 250);
+            }
+        },
+
+        /**
+         * Adjust game space dimensions on resize.
+         */
+        adjustDimensions: function () {
+            clearInterval(this.resizeTimerId_);
+            this.resizeTimerId_ = null;
+
+            var boxStyles = window.getComputedStyle(this.outerContainerEl);
+            var padding = Number(boxStyles.paddingLeft.substr(0,
+                boxStyles.paddingLeft.length - 2));
+
+            this.runner.dimensions.WIDTH = this.outerContainerEl.offsetWidth - padding * 2;
+
+            // Redraw the elements back onto the canvas.
+            if (this.canvas) {
+                this.canvas.width = this.runner.dimensions.WIDTH;
+                this.canvas.height = this.runner.dimensions.HEIGHT;
+
+                Runner.updateCanvasScaling(this.canvas);
+
+                this.distanceMeter.calcXPos(this.runner.dimensions.WIDTH);
+                this.canvasCtx.clearRect(0, 0, this.runner.dimensions.WIDTH,
+                    this.runner.dimensions.HEIGHT);
+                this.horizon.update(0, 0, true);
+                this.tRex.update(0);
+
+                // Outer container and distance meter.
+                if (this.playing || this.crashed || this.paused) {
+                    this.containerEl.style.width = this.runner.dimensions.WIDTH + 'px';
+                    this.containerEl.style.height = this.runner.dimensions.HEIGHT + 'px';
+                    this.distanceMeter.update(0, Math.ceil(this.distanceRan));
+                    this.stop();
+                } else {
+                    this.tRex.draw(0, 0);
+                }
+
+                // Game over panel.
+                if (this.crashed && this.gameOverPanel) {
+                    this.gameOverPanel.updateDimensions(this.dimensions.WIDTH);
+                    this.gameOverPanel.draw();
+                }
+            }
+        },
+        /**
+         * Game over state.
+         */
+        gameOver: function () {
+            this.runner.playSound(this.runner.soundFx.HIT);
+            vibrate(200);
+
+            this.stop();
+            this.crashed = true;
+            this.distanceMeter.acheivement = false;
+
+            this.tRex.update(100, Trex.status.CRASHED);
+
+            // Game over panel.
+            if (!this.gameOverPanel) {
+                this.gameOverPanel = new GameOverPanel(this.canvas,
+                    this.spriteDef.TEXT_SPRITE, this.spriteDef.RESTART,
+                    this.dimensions);
+            } else {
+                this.gameOverPanel.draw();
+            }
+
+            // Update the high score.
+            if (this.distanceRan > this.highestScore) {
+                this.highestScore = Math.ceil(this.distanceRan);
+                this.distanceMeter.setHighScore(this.highestScore);
+            }
+
+            // Reset the time clock.
+            this.time = getTimeStamp();
+        },
+
+    }
+    /**
      * T-Rex runner.
      * @param {string} outerContainerId Outer containing element id.
      * @param {Object} opt_config
      * @constructor
      * @export
      */
-    function Runner(outerContainerId, opt_config) {
+    function Runner(outerContainerId1, outerContainerId2, opt_config) {
         // Singleton
         if (Runner.instance_) {
             return Runner.instance_;
         }
         Runner.instance_ = this;
 
-        this.outerContainerEl = document.querySelector(outerContainerId);
-        this.containerEl = null;
+        this.outerContainerEl = [];
+        this.outerContainerEl.push(document.querySelector(outerContainerId1));
+        this.outerContainerEl.push(document.querySelector(outerContainerId2));
+        // this.containerEl = null;
         this.snackbarEl = null;
-        this.detailsButton = this.outerContainerEl.querySelector('#details-button');
+        // this.detailsButton = this.outerContainerEl[0].querySelector('#details-button'); // only for mobile
 
         this.config = opt_config || Runner.config;
 
         this.dimensions = Runner.defaultDimensions;
 
-        this.canvas = null;
-        this.canvasCtx = null;
+        //this.canvas = null;
+        //this.canvasCtx = null;
 
-        this.tRex = null;
+        //this.tRex = null;
 
-        this.distanceMeter = null;
-        this.distanceRan = 0;
+        //this.distanceMeter = null;
+        //this.distanceRan = 0;
 
         this.highestScore = 0;
 
         this.time = 0;
         this.runningTime = 0;
         this.msPerFrame = 1000 / FPS;
-        this.currentSpeed = this.config.SPEED;
+        this.currentSpeed = this.config.SPEED;  // the speed is same
 
         this.obstacles = [];
 
@@ -64,6 +187,9 @@
         // Images.
         this.images = {};
         this.imagesLoaded = 0;
+
+        // Players.
+        this.players = [];
 
         if (this.isDisabled()) {
             this.setupDisabledRunner();
@@ -203,6 +329,8 @@
     Runner.keycodes = {
         JUMP: { '38': 1, '32': 1 },  // Up, spacebar
         DUCK: { '40': 1 },  // Down
+        W: {'87': 1},
+        S: {'83': 1},
         RESTART: { '13': 1 }  // Enter
     };
 
@@ -352,33 +480,13 @@
             document.querySelector('.' + Runner.classes.ICON).style.visibility =
                 'hidden';
 
-            this.adjustDimensions();
             this.setSpeed();
-
-            this.containerEl = document.createElement('div');
-            this.containerEl.className = Runner.classes.CONTAINER;
-
-            // Player canvas container.
-            this.canvas = createCanvas(this.containerEl, this.dimensions.WIDTH,
-                this.dimensions.HEIGHT, Runner.classes.PLAYER);
-
-            this.canvasCtx = this.canvas.getContext('2d');
-            this.canvasCtx.fillStyle = '#f7f7f7';
-            this.canvasCtx.fill();
-            Runner.updateCanvasScaling(this.canvas);
-
-            // Horizon contains clouds, obstacles and the ground.
-            this.horizon = new Horizon(this.canvas, this.spriteDef, this.dimensions,
-                this.config.GAP_COEFFICIENT);
-
-            // Distance meter
-            this.distanceMeter = new DistanceMeter(this.canvas,
-                this.spriteDef.TEXT_SPRITE, this.dimensions.WIDTH);
-
-            // Draw t-rex
-            this.tRex = new Trex(this.canvas, this.spriteDef.TREX);
-
-            this.outerContainerEl.appendChild(this.containerEl);
+            //
+            this.players.push(new Player());    // P1
+            this.players.push(new Player());    // P2
+            this.players[0].init(this, 0);
+            this.players[1].init(this, 1);
+            this.adjustDimensions();
 
             if (IS_MOBILE) {
                 this.createTouchController();
@@ -391,6 +499,15 @@
                 this.debounceResize.bind(this));
         },
 
+        debounceResize: function() {
+            this.players[0].debounceResize();
+            this.players[1].debounceResize();
+        },
+
+        adjustDimensions: function() {
+            this.players[0].adjustDimensions();
+            this.players[1].adjustDimensions();
+        },
         /**
          * Create the touch controller. A div that covers whole screen.
          */
@@ -401,66 +518,14 @@
         },
 
         /**
-         * Debounce the resize event.
-         */
-        debounceResize: function () {
-            if (!this.resizeTimerId_) {
-                this.resizeTimerId_ =
-                    setInterval(this.adjustDimensions.bind(this), 250);
-            }
-        },
-
-        /**
-         * Adjust game space dimensions on resize.
-         */
-        adjustDimensions: function () {
-            clearInterval(this.resizeTimerId_);
-            this.resizeTimerId_ = null;
-
-            var boxStyles = window.getComputedStyle(this.outerContainerEl);
-            var padding = Number(boxStyles.paddingLeft.substr(0,
-                boxStyles.paddingLeft.length - 2));
-
-            this.dimensions.WIDTH = this.outerContainerEl.offsetWidth - padding * 2;
-
-            // Redraw the elements back onto the canvas.
-            if (this.canvas) {
-                this.canvas.width = this.dimensions.WIDTH;
-                this.canvas.height = this.dimensions.HEIGHT;
-
-                Runner.updateCanvasScaling(this.canvas);
-
-                this.distanceMeter.calcXPos(this.dimensions.WIDTH);
-                this.clearCanvas();
-                this.horizon.update(0, 0, true);
-                this.tRex.update(0);
-
-                // Outer container and distance meter.
-                if (this.playing || this.crashed || this.paused) {
-                    this.containerEl.style.width = this.dimensions.WIDTH + 'px';
-                    this.containerEl.style.height = this.dimensions.HEIGHT + 'px';
-                    this.distanceMeter.update(0, Math.ceil(this.distanceRan));
-                    this.stop();
-                } else {
-                    this.tRex.draw(0, 0);
-                }
-
-                // Game over panel.
-                if (this.crashed && this.gameOverPanel) {
-                    this.gameOverPanel.updateDimensions(this.dimensions.WIDTH);
-                    this.gameOverPanel.draw();
-                }
-            }
-        },
-
-        /**
          * Play the game intro.
          * Canvas container width expands out to the full width.
          */
         playIntro: function () {
             if (!this.activated && !this.crashed) {
                 this.playingIntro = true;
-                this.tRex.playingIntro = true;
+                this.players[0].tRex.playingIntro = true;
+                this.players[1].tRex.playingIntro = true;
 
                 // CSS animation definition.
                 var keyframes = '@-webkit-keyframes intro { ' +
@@ -473,13 +538,14 @@
                 var sheet = document.createElement('style');
                 sheet.innerHTML = keyframes;
                 document.head.appendChild(sheet);
-
-                this.containerEl.addEventListener(Runner.events.ANIM_END,
+                this.players[1].containerEl.addEventListener(Runner.events.ANIM_END,
                     this.startGame.bind(this));
-
-                this.containerEl.style.webkitAnimation = 'intro .4s ease-out 1 both';
-                this.containerEl.style.width = this.dimensions.WIDTH + 'px';
-
+                this.players[0].containerEl.addEventListener(Runner.events.ANIM_END,
+                    this.startGame.bind(this));
+                this.players[1].containerEl.style.webkitAnimation = 'intro .4s ease-out 1 both';
+                this.players[1].containerEl.style.width = this.dimensions.WIDTH + 'px';
+                this.players[0].containerEl.style.webkitAnimation = 'intro .4s ease-out 1 both';
+                this.players[0].containerEl.style.width = this.dimensions.WIDTH + 'px';
                 // if (this.touchController) {
                 //     this.outerContainerEl.appendChild(this.touchController);
                 // }
@@ -497,8 +563,10 @@
         startGame: function () {
             this.runningTime = 0;
             this.playingIntro = false;
-            this.tRex.playingIntro = false;
-            this.containerEl.style.webkitAnimation = '';
+            this.players[0].tRex.playingIntro = false;
+            this.players[1].tRex.playingIntro = false;
+            this.players[0].containerEl.style.webkitAnimation = '';
+            this.players[1].containerEl.style.webkitAnimation = '';
             this.playCount++;
 
             // Handle tabbing off the page. Pause the current game.
@@ -513,7 +581,9 @@
         },
 
         clearCanvas: function () {
-            this.canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
+            this.players[0].canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
+                this.dimensions.HEIGHT);
+            this.players[1].canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
                 this.dimensions.HEIGHT);
         },
 
@@ -528,47 +598,68 @@
             this.time = now;
 
             if (this.playing) {
-                this.clearCanvas();
+                this. clearCanvas();
 
-                if (this.tRex.jumping) {
-                    this.tRex.updateJump(deltaTime);
+                if (this.players[0].tRex.jumping) {
+                    this.players[0].tRex.updateJump(deltaTime);
+                }
+                if (this.players[1].tRex.jumping) {
+                    this.players[1].tRex.updateJump(deltaTime);
                 }
 
                 this.runningTime += deltaTime;
                 var hasObstacles = this.runningTime > this.config.CLEAR_TIME;
 
                 // First jump triggers the intro.
-                if (this.tRex.jumpCount == 1 && !this.playingIntro) {
+                if (this.players[0].tRex.jumpCount == 1 && this.players[1].tRex.jumpCount == 1 && !this.playingIntro) {
                     this.playIntro();
                 }
-
                 // The horizon doesn't move until the intro is over.
                 if (this.playingIntro) {
-                    this.horizon.update(0, this.currentSpeed, hasObstacles);
+                    this.players[0].horizon.update(0, this.currentSpeed, hasObstacles);
+                    this.players[1].horizon.update(0, this.currentSpeed, hasObstacles);
                 } else {
                     deltaTime = !this.activated ? 0 : deltaTime;
-                    this.horizon.update(deltaTime, this.currentSpeed, hasObstacles,
+                    this.players[0].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
+                        this.inverted);
+                    this.players[1].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
                         this.inverted);
                 }
 
                 // Check for collisions.
-                var collision = hasObstacles &&
-                    checkForCollision(this.horizon.obstacles[0], this.tRex);
+                var collision1 = hasObstacles &&
+                    checkForCollision(this.players[0].horizon.obstacles[0], this.players[0].tRex);
+                var collision2 = hasObstacles &&
+                    checkForCollision(this.players[1].horizon.obstacles[0], this.players[1].tRex);
 
-                if (!collision) {
-                    this.distanceRan += this.currentSpeed * deltaTime / this.msPerFrame;
+                if (!collision1) {
+                    this.players[0].distanceRan += this.currentSpeed * deltaTime / this.msPerFrame;
 
                     if (this.currentSpeed < this.config.MAX_SPEED) {
                         this.currentSpeed += this.config.ACCELERATION;
                     }
                 } else {
-                    this.gameOver();
+                    this.players[0].gameOver();
                 }
+                if (!collision2){
+                    this.players[1].distanceRan += this.currentSpeed * deltaTime / this.msPerFrame;
 
-                var playAchievementSound = this.distanceMeter.update(deltaTime,
-                    Math.ceil(this.distanceRan));
-
-                if (playAchievementSound) {
+                    if (this.currentSpeed < this.config.MAX_SPEED) {
+                        this.currentSpeed += this.config.ACCELERATION;
+                    }
+                } else {
+                    this.players[1].gameOver();
+                }
+                // calculate meter using player 1
+                //
+                var playAchievementSound1 = this.players[0].distanceMeter.update(deltaTime,
+                    Math.ceil(this.players[0].distanceRan));
+                var playAchievementSound2 = this.players[1].distanceMeter.update(deltaTime,
+                    Math.ceil(this.players[1].distanceRan));
+                if (playAchievementSound1) {
+                    this.playSound(this.soundFx.SCORE);
+                }
+                if (playAchievementSound2) {
                     this.playSound(this.soundFx.SCORE);
                 }
 
@@ -581,7 +672,7 @@
                     this.invertTimer += deltaTime;
                 } else {
                     var actualDistance =
-                        this.distanceMeter.getActualDistance(Math.ceil(this.distanceRan));
+                        this.players[0].distanceMeter.getActualDistance(Math.ceil(this.players[0].distanceRan));
 
                     if (actualDistance > 0) {
                         this.invertTrigger = !(actualDistance %
@@ -596,8 +687,9 @@
             }
 
             if (this.playing || (!this.activated &&
-                this.tRex.blinkCount < Runner.config.MAX_BLINK_COUNT)) {
-                this.tRex.update(deltaTime);
+                this.players[0].tRex.blinkCount < Runner.config.MAX_BLINK_COUNT)) {
+                this.players[0].tRex.update(deltaTime);
+                this.players[1].tRex.update(deltaTime);
                 this.scheduleNextUpdate();
             }
         },
@@ -681,9 +773,25 @@
                         }
                     }
                     //  Play sound effect and jump on starting the game for the first time.
-                    if (!this.tRex.jumping && !this.tRex.ducking) {
+                    if (!this.players[0].tRex.jumping && !this.players[0].tRex.ducking) {
                         this.playSound(this.soundFx.BUTTON_PRESS);
-                        this.tRex.startJump(this.currentSpeed);
+                        this.players[0].tRex.startJump(this.currentSpeed);
+                    }
+                }
+                if (!this.crashed && (Runner.keycodes.W[e.keyCode] ||
+                    e.type == Runner.events.TOUCHSTART)) {
+                    if (!this.playing) {
+                        this.loadSounds();
+                        this.playing = true;
+                        this.update();
+                        if (window.errorPageController) {
+                            errorPageController.trackEasterEgg();
+                        }
+                    }
+                    //  Play sound effect and jump on starting the game for the first time.
+                    if (!this.players[1].tRex.jumping && !this.players[1].tRex.ducking) {
+                        this.playSound(this.soundFx.BUTTON_PRESS);
+                        this.players[1].tRex.startJump(this.currentSpeed);
                     }
                 }
 
@@ -711,16 +819,25 @@
          * @param {Event} e
          */
         onKeyUp: function (e) {
+            console.log("up");
             var keyCode = String(e.keyCode);
-            var isjumpKey = Runner.keycodes.JUMP[keyCode] ||
+            var isjumpKey1 = Runner.keycodes.JUMP[keyCode] ||
                 e.type == Runner.events.TOUCHEND ||
                 e.type == Runner.events.MOUSEDOWN;
-
-            if (this.isRunning() && isjumpKey) {
-                this.tRex.endJump();
+            var isjumpKey2 = Runner.keycodes.W[keyCode];
+            if(this.isRunning() && (isjumpKey1 || isjumpKey2)) {
+                if (isjumpKey1) {
+                    this.players[0].tRex.endJump();
+                }
+                if (isjumpKey2) {
+                    this.players[1].tRex.endJump();
+                }
             } else if (Runner.keycodes.DUCK[keyCode]) {
-                this.tRex.speedDrop = false;
-                this.tRex.setDuck(false);
+                this.players[0].tRex.speedDrop = false;
+                this.players[0].tRex.setDuck(false);
+            } else if (Runner.keycodes.S[keyCode]) {
+                this.players[1].tRex.speedDrop = false;
+                this.players[1].tRex.setDuck(false);
             } else if (this.crashed) {
                 // Check that enough time has elapsed before allowing jump key to restart.
                 var deltaTime = getTimeStamp() - this.time;
@@ -766,38 +883,7 @@
             return !!this.raqId;
         },
 
-        /**
-         * Game over state.
-         */
-        gameOver: function () {
-            this.playSound(this.soundFx.HIT);
-            vibrate(200);
-
-            this.stop();
-            this.crashed = true;
-            this.distanceMeter.acheivement = false;
-
-            this.tRex.update(100, Trex.status.CRASHED);
-
-            // Game over panel.
-            if (!this.gameOverPanel) {
-                this.gameOverPanel = new GameOverPanel(this.canvas,
-                    this.spriteDef.TEXT_SPRITE, this.spriteDef.RESTART,
-                    this.dimensions);
-            } else {
-                this.gameOverPanel.draw();
-            }
-
-            // Update the high score.
-            if (this.distanceRan > this.highestScore) {
-                this.highestScore = Math.ceil(this.distanceRan);
-                this.distanceMeter.setHighScore(this.highestScore);
-            }
-
-            // Reset the time clock.
-            this.time = getTimeStamp();
-        },
-
+        
         stop: function () {
             this.playing = false;
             this.paused = true;
@@ -1636,7 +1722,6 @@
          */
         update: function (deltaTime, opt_status) {
             this.timer += deltaTime;
-
             // Update the status.
             if (opt_status) {
                 this.status = opt_status;
@@ -2709,7 +2794,7 @@
 
 
 function onDocumentLoad() {
-    new Runner('.interstitial-wrapper');
+    new Runner('.interstitial-wrapper1', '.interstitial-wrapper2');
 }
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
