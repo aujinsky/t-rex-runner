@@ -12,7 +12,9 @@
     Player.prototype = {
         init: function(runner, player_no) {
             this.player_no = player_no
-            console.log(player_no);
+            this.playing = false; // Whether the game is currently in play state.
+            this.crashed = false;
+            this.paused = false;
             this.runner = runner;
             this.outerContainerEl = this.runner.outerContainerEl[this.player_no];
             this.containerEl = document.createElement('div');
@@ -108,8 +110,8 @@
             // Game over panel.
             if (!this.gameOverPanel) {
                 this.gameOverPanel = new GameOverPanel(this.canvas,
-                    this.spriteDef.TEXT_SPRITE, this.spriteDef.RESTART,
-                    this.dimensions);
+                    this.runner.spriteDef.TEXT_SPRITE, this.runner.spriteDef.RESTART,
+                    this.runner.dimensions);
             } else {
                 this.gameOverPanel.draw();
             }
@@ -122,6 +124,15 @@
 
             // Reset the time clock.
             this.time = getTimeStamp();
+        },
+        /**
+         * Individual player stop
+         */
+        stop: function () {
+            this.playing = false;
+            this.paused = true;
+            cancelAnimationFrame(this.raqId);
+            this.raqId = 0;
         },
 
     }
@@ -522,7 +533,7 @@
          * Canvas container width expands out to the full width.
          */
         playIntro: function () {
-            if (!this.activated && !this.crashed) {
+            if (!this.activated && !this.players[0].crashed && !this.players[1].crashed) {
                 this.playingIntro = true;
                 this.players[0].tRex.playingIntro = true;
                 this.players[1].tRex.playingIntro = true;
@@ -803,12 +814,19 @@
 
             if (this.playing && !this.crashed && Runner.keycodes.DUCK[e.keyCode]) {
                 e.preventDefault();
-                if (this.tRex.jumping) {
+                if (this.players[0].tRex.jumping) {
                     // Speed drop, activated only when jump key is not pressed.
-                    this.tRex.setSpeedDrop();
-                } else if (!this.tRex.jumping && !this.tRex.ducking) {
+                    this.players[0].tRex.setSpeedDrop();
+                } else if (!this.players[0].tRex.jumping && !this.players[0].tRex.ducking) {
                     // Duck.
-                    this.tRex.setDuck(true);
+                    this.players[0].tRex.setDuck(true);
+                }
+                if (this.players[1].tRex.jumping) {
+                    // Speed drop, activated only when jump key is not pressed.
+                    this.players[1].tRex.setSpeedDrop();
+                } else if (!this.players[1].tRex.jumping && !this.players[1].tRex.ducking) {
+                    // Duck.
+                    this.players[1].tRex.setDuck(true);
                 }
             }
         },
@@ -1130,6 +1148,7 @@
          * Draw the panel.
          */
         draw: function () {
+            console.log("!");
             var dimensions = GameOverPanel.dimensions;
 
             var centerX = this.canvasDimensions.WIDTH / 2;
@@ -2704,7 +2723,7 @@
 
                 if (lastObstacle && !lastObstacle.followingObstacleCreated &&
                     lastObstacle.isVisible() &&
-                    (lastObstacle.xPos + lastObstacle.width + lastObstacle.gap) <
+                    1.5 * (lastObstacle.xPos + lastObstacle.width + lastObstacle.gap) <
                     this.dimensions.WIDTH) {
                     this.addNewObstacle(currentSpeed);
                     lastObstacle.followingObstacleCreated = true;
