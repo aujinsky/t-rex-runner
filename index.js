@@ -103,6 +103,10 @@
 
             this.stop();
             this.crashed = true;
+            if(this.runner.players[0].crashed && this.runner.players[1].crashed) {
+                this.runner.crashed = true;
+                this.runner.playing = false;
+            }
             this.distanceMeter.acheivement = false;
 
             this.tRex.update(100, Trex.status.CRASHED);
@@ -180,7 +184,7 @@
 
         this.activated = false; // Whether the easter egg has been activated.
         this.playing = false; // Whether the game is currently in play state.
-        this.crashed = false;
+        this.crashed = false;   // Whether both player is crashed
         this.paused = false;
         this.inverted = false;
         this.invertTimer = 0;
@@ -561,8 +565,10 @@
                 //     this.outerContainerEl.appendChild(this.touchController);
                 // }
                 this.playing = true;
+                this.players[0].playing = true;
+                this.players[1].playing = true;
                 this.activated = true;
-            } else if (this.crashed) {
+            } else if (this.players[0].crashed && this.players[1].crashed) {
                 this.restart();
             }
         },
@@ -592,10 +598,14 @@
         },
 
         clearCanvas: function () {
-            this.players[0].canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
-                this.dimensions.HEIGHT);
-            this.players[1].canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
-                this.dimensions.HEIGHT);
+            if (this.players[0].playing || !this.playing) {
+                this.players[0].canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
+                    this.dimensions.HEIGHT);
+            }
+            if (this.players[1].playing || !this.playing) {
+                this.players[1].canvasCtx.clearRect(0, 0, this.dimensions.WIDTH,
+                    this.dimensions.HEIGHT);
+            }
         },
 
         /**
@@ -607,19 +617,16 @@
             var now = getTimeStamp();
             var deltaTime = now - (this.time || now);
             this.time = now;
-
             if (this.playing) {
                 this. clearCanvas();
-
-                if (this.players[0].tRex.jumping) {
-                    this.players[0].tRex.updateJump(deltaTime);
-                }
-                if (this.players[1].tRex.jumping) {
-                    this.players[1].tRex.updateJump(deltaTime);
-                }
-
                 this.runningTime += deltaTime;
                 var hasObstacles = this.runningTime > this.config.CLEAR_TIME;
+                if (this.players[0].tRex.jumping && this.players[0].playing) {
+                    this.players[0].tRex.updateJump(deltaTime);
+                }
+                if (this.players[1].tRex.jumping && this.players[1].playing) {
+                    this.players[1].tRex.updateJump(deltaTime);
+                }
 
                 // First jump triggers the intro.
                 if (this.players[0].tRex.jumpCount == 1 && this.players[1].tRex.jumpCount == 1 && !this.playingIntro) {
@@ -631,17 +638,21 @@
                     this.players[1].horizon.update(0, this.currentSpeed, hasObstacles);
                 } else {
                     deltaTime = !this.activated ? 0 : deltaTime;
-                    this.players[0].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
-                        this.inverted);
-                    this.players[1].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
-                        this.inverted);
+                    if (this.players[0].playing) {
+                        this.players[0].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
+                            this.inverted);
+                    }
+                    if (this.players[1].playing) {
+                        this.players[1].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
+                            this.inverted);
+                    }
                 }
 
                 // Check for collisions.
                 var collision1 = hasObstacles &&
-                    checkForCollision(this.players[0].horizon.obstacles[0], this.players[0].tRex);
+                    checkForCollision(this.players[0].horizon.obstacles[0], this.players[0].tRex) && this.players[0].playing;
                 var collision2 = hasObstacles &&
-                    checkForCollision(this.players[1].horizon.obstacles[0], this.players[1].tRex);
+                    checkForCollision(this.players[1].horizon.obstacles[0], this.players[1].tRex) && this.players[1].playing;
 
                 if (!collision1) {
                     this.players[0].distanceRan += this.currentSpeed * deltaTime / this.msPerFrame;
@@ -773,11 +784,13 @@
             }
 
             if (e.target != this.detailsButton) {
-                if (!this.crashed && (Runner.keycodes.JUMP[e.keyCode] ||
+                if (!this.players[0].crashed && (Runner.keycodes.JUMP[e.keyCode] ||
                     e.type == Runner.events.TOUCHSTART)) {
                     if (!this.playing) {
                         this.loadSounds();
                         this.playing = true;
+                        this.players[0].playing = true;
+                        this.players[1].playing = true;
                         this.update();
                         if (window.errorPageController) {
                             errorPageController.trackEasterEgg();
@@ -789,11 +802,13 @@
                         this.players[0].tRex.startJump(this.currentSpeed);
                     }
                 }
-                if (!this.crashed && (Runner.keycodes.W[e.keyCode] ||
+                if (!this.players[1].crashed && (Runner.keycodes.W[e.keyCode] ||
                     e.type == Runner.events.TOUCHSTART)) {
                     if (!this.playing) {
                         this.loadSounds();
                         this.playing = true;
+                        this.players[0].playing = true;
+                        this.players[1].playing = true;
                         this.update();
                         if (window.errorPageController) {
                             errorPageController.trackEasterEgg();
@@ -805,13 +820,11 @@
                         this.players[1].tRex.startJump(this.currentSpeed);
                     }
                 }
-
                 if (this.crashed && e.type == Runner.events.TOUCHSTART &&
                     e.currentTarget == this.containerEl) {
                     this.restart();
                 }
             }
-
             if (this.playing && !this.crashed && Runner.keycodes.DUCK[e.keyCode]) {
                 e.preventDefault();
                 if (this.players[0].tRex.jumping) {
@@ -821,6 +834,9 @@
                     // Duck.
                     this.players[0].tRex.setDuck(true);
                 }
+            }
+            if (this.playing && !this.crashed && Runner.keycodes.S[e.keyCode]) {
+                e.preventDefault();
                 if (this.players[1].tRex.jumping) {
                     // Speed drop, activated only when jump key is not pressed.
                     this.players[1].tRex.setSpeedDrop();
@@ -837,7 +853,6 @@
          * @param {Event} e
          */
         onKeyUp: function (e) {
-            console.log("up");
             var keyCode = String(e.keyCode);
             var isjumpKey1 = Runner.keycodes.JUMP[keyCode] ||
                 e.type == Runner.events.TOUCHEND ||
@@ -912,6 +927,8 @@
         play: function () {
             if (!this.crashed) {
                 this.playing = true;
+                this.players[0].playing = true;
+                this.players[1].playing = true;
                 this.paused = false;
                 this.tRex.update(0, Trex.status.RUNNING);
                 this.time = getTimeStamp();
@@ -924,6 +941,8 @@
                 this.playCount++;
                 this.runningTime = 0;
                 this.playing = true;
+                this.players[0].playing = true;
+                this.players[1].playing = true;
                 this.crashed = false;
                 this.distanceRan = 0;
                 this.setSpeed(this.config.SPEED);
@@ -1148,7 +1167,6 @@
          * Draw the panel.
          */
         draw: function () {
-            console.log("!");
             var dimensions = GameOverPanel.dimensions;
 
             var centerX = this.canvasDimensions.WIDTH / 2;
