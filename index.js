@@ -11,6 +11,8 @@
     }
     Player.prototype = {
         init: function(runner, player_no) {
+            this.distanceRan = 0;
+            this.collision = false;
             this.player_no = player_no
             this.playing = false; // Whether the game is currently in play state.
             this.crashed = false;
@@ -653,17 +655,22 @@
                     checkForCollision(this.players[0].horizon.obstacles[0], this.players[0].tRex) && this.players[0].playing;
                 var collision2 = hasObstacles &&
                     checkForCollision(this.players[1].horizon.obstacles[0], this.players[1].tRex) && this.players[1].playing;
+                if (!this.players[0].collision){
+                    this.players[0].collision = collision1;
+                }
+                if (!this.players[1].collision){
+                    this.players[1].collision = collision2;
+                }
 
-                if (!collision1) {
+                if (!this.players[0].collision) {
                     this.players[0].distanceRan += this.currentSpeed * deltaTime / this.msPerFrame;
-
                     if (this.currentSpeed < this.config.MAX_SPEED) {
                         this.currentSpeed += this.config.ACCELERATION;
                     }
                 } else {
                     this.players[0].gameOver();
                 }
-                if (!collision2){
+                if (!this.players[1].collision){
                     this.players[1].distanceRan += this.currentSpeed * deltaTime / this.msPerFrame;
 
                     if (this.currentSpeed < this.config.MAX_SPEED) {
@@ -672,6 +679,7 @@
                 } else {
                     this.players[1].gameOver();
                 }
+                
                 // calculate meter using player 1
                 //
                 var playAchievementSound1 = this.players[0].distanceMeter.update(deltaTime,
