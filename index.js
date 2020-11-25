@@ -667,7 +667,10 @@
                     if (this.currentSpeed < this.config.MAX_SPEED) {
                         this.currentSpeed += this.config.ACCELERATION;
                     }
-                } else {
+                }/* else {
+                    this.players[0].gameOver();
+                }*/
+                if(collision1){
                     this.players[0].gameOver();
                 }
                 if (!this.players[1].collision){
@@ -676,7 +679,10 @@
                     if (this.currentSpeed < this.config.MAX_SPEED) {
                         this.currentSpeed += this.config.ACCELERATION;
                     }
-                } else {
+                }/* else {
+                    this.players[1].gameOver();
+                }*/
+                if(collision2){
                     this.players[1].gameOver();
                 }
                 
