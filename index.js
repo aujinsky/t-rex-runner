@@ -517,17 +517,18 @@
                 faceapi.nets.faceExpressionNet.loadFromUri('/models')
             ]).then(startVideo(this.video));
             this.video.addEventListener('play', () => {
-                vid_canvas = faceapi.createCanvasFromMedia(this.video)
-                document.body.append(canvas)
+                console.log("play_vid")
+                const vid_canvas = faceapi.createCanvasFromMedia(this.video)
+                document.body.append(vid_canvas)
                 const displaySize = { width: this.video.width, height: this.video.height }
-                faceapi.matchDimensions(canvas, displaySize)
+                faceapi.matchDimensions(vid_canvas, displaySize)
                 setInterval(async () => {
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
                   const resizedDetections = faceapi.resizeResults(detections, displaySize)
                   vid_canvas.getContext('2d').clearRect(0, 0, vid_canvas.width, vid_canvas.height)
-                  faceapi.draw.drawDetections(canvas, resizedDetections)
-                  faceapi.draw.drawFaceLandmarks(canvas, resizedDetections)
-                  faceapi.draw.drawFaceExpressions(canvas, resizedDetections)
+                  faceapi.draw.drawDetections(vid_canvas, resizedDetections)
+                  faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
+                  faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
                 }, 100)
               })
             this.setSpeed();
