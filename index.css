@@ -8,7 +8,12 @@ html, body {
   width: 100%;
   height: 100%;
 }
-
+#tasks {
+  position: absolute;
+  text-align: center;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
 .icon {
   -webkit-user-select: none;
   user-select: none;
@@ -37,31 +42,12 @@ html, body {
   width: 100%;
 }
 
-.offline .interstitial-wrapper2 {
-  color: #2b2b2b;
-  font-size: 1em;
-  line-height: 1.55;
-  margin: 0 auto;
-  max-width: 600px;
-  padding-top: 400px;
-  width: 100%;
-}
-
 .offline .runner-container1 {
   height: 150px;
   max-width: 600px;
   overflow: hidden;
   position: absolute;
   top: 350px;
-  width: 44px;
-}
-
-.offline .runner-container2 {
-  height: 150px;
-  max-width: 600px;
-  overflow: hidden;
-  position: absolute;
-  top: 35px;
   width: 44px;
 }
 
@@ -111,9 +97,6 @@ html, body {
   .interstitial-wrapper1 {
     margin-top: 5%;
   }
-  .interstitial-wrapper2 {
-    margin-top: 5%;
-  }
   .nav-wrapper {
     margin-top: 30px;
   }
@@ -124,27 +107,17 @@ html, body {
     margin-left: 0;
     margin-right: 0;
   }
-  .offline .interstitial-wrapper2 {
-    margin-left: 0;
-    margin-right: 0;
-  }
 }
 
 @media (min-width: 420px) and (max-width: 736px) and (min-height: 240px) and (max-height: 420px) and (orientation:landscape) {
   .interstitial-wrapper1 {
     margin-bottom: 100px;
   }
-  .interstitial-wrapper2 {
-    margin-bottom: 50px;
-  }
 }
 
 @media (min-height: 240px) and (orientation: landscape) {
   .offline .interstitial-wrapper1 {
     margin-bottom: 90px;
-  }
-  .offline .interstitial-wrapper2 {
-    margin-bottom: 40px;
   }
   .icon-offline {
     margin-bottom: 20px;
@@ -158,18 +131,11 @@ html, body {
   .offline .runner-container1 {
     top: 10px;
   }
-  .offline .runner-container2 {
-    top: 150px;
-  }
 }
 
 @media (max-width: 240px) {
   .interstitial-wrapper1 {
     overflow: inherit;
     padding: 0 8px;
-  }
-  .interstitial-wrapper2 {
-    overflow: inherit;
-    padding: 0 20px;
   }
 }

@@ -215,7 +215,7 @@
 
         // Players.
         this.players = [];
-
+        this.lastTime = 0;
         this.video = document.getElementById('video');
 
         if (this.isDisabled()) {
@@ -531,6 +531,12 @@
                   faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
                 }, 100)
               })
+            this.para = document.createElement("p");
+            this.node = document.createTextNode("tasks");
+            this.para.appendChild(this.node);
+            this.taskElement = document.getElementById("tasks");
+            this.taskElement.style.fontSize = "75px";
+            this.taskElement.appendChild(this.para);
             this.setSpeed();
             //
             this.players.push(new Player());    // P1
@@ -740,7 +746,7 @@
                 if (playAchievementSound2) {
                     this.playSound(this.soundFx.SCORE);
                 }
-
+                this.task();
                 // Night mode.
                 if (this.invertTimer > this.config.INVERT_FADE_DURATION) {
                     this.invertTimer = 0;
@@ -763,7 +769,6 @@
                     }
                 }
             }
-
             if (this.playing || (!this.activated &&
                 this.players[0].tRex.blinkCount < Runner.config.MAX_BLINK_COUNT)) {
                 this.players[0].tRex.update(deltaTime);
@@ -771,7 +776,12 @@
                 this.scheduleNextUpdate();
             }
         },
-
+        task: function () {
+            if (this.runningTime > this.lastTime + 2500) {
+                this.lastTime = this.runningTime;
+                this.taskElement.childNodes[0].replaceWith(document.createTextNode(Math.random().toString()));
+            }
+        },
         /**
          * Event handler.
          */
@@ -2891,7 +2901,7 @@
 
 
 function onDocumentLoad() {
-    new Runner('.interstitial-wrapper1', '.interstitial-wrapper2');
+    new Runner('.interstitial-wrapper1', '.interstitial-wrapper1');
 }
 
 document.addEventListener('DOMContentLoaded', onDocumentLoad);
