@@ -511,25 +511,76 @@
             document.querySelector('.' + Runner.classes.ICON).style.visibility =
                 'hidden';
             Promise.all([
+                // faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
                 faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-                faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-                faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
+                // faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+                // faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
                 faceapi.nets.faceExpressionNet.loadFromUri('/models')
             ]).then(startVideo(this.video));
+            initialization()
+            console.log("start video");
+            this.video.addEventListener('play', async () => {
+                const pho_canvas = faceapi.createCanvasFromMedia(this.video)
+                document.body.append(pho_canvas)
+                const displaySize = { width: this.video.width, height: this.video.height }
+                faceapi.matchDimensions(pho_canvas, displaySize)
+                var photo = setInterval(async () => {
+                  const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
+                  
+                  const resizedDetections = faceapi.resizeResults(detections, displaySize)
+                  
+                  const regionsToExtract = [
+                    new faceapi.Rect(detections[0].detection.box.x, detections[0].detection.box.y , detections[0].detection.box.width , detections[0].detection.box.height)
+                  ]
+                  let faceImages = await faceapi.extractFaces(this.video, regionsToExtract)
+                  let imgtensor = tf.browser.fromPixels(faceImages[0]).resizeNearestNeighbor([224, 224])
+                  imgtensor = imgtensor.dataSync()
+                  //  let input_init = tf.reshape(imgtensor, [1,3,224,224]).dataSync()
+                //   let input_init = imgtensor.dataSync()
+                  
+                  let r_inp = new Float32Array(1*3*224*224);
+                  
+                  for(let c =0;c<3;c++){
+                      for(let w = 0; w< 224; w++){
+                        for(let h = 0; h<224 ; h++){
+                            let i = c*224*224 + w*224 + h;
+                            let j = w*224*3 + h*3 + c;
+                            r_inp[i] = imgtensor[j]/255;
+                        }
+                      }
+                  }
+
+                  pho_canvas.getContext('2d').clearRect(0, 0, pho_canvas.width, pho_canvas.height)
+
+                  if (resizedDetections.length > 0 && resizedDetections[0].detection.score > 0.7) {
+                    let facevalue = await faceInference(r_inp);
+                    console.log("facevalue",facevalue);
+                    // break
+                    clearInterval(photo);
+                  }
+                }, 1000)
+              })
+            
+            startVideo(this.video)
+            console.log("start video");
             this.video.addEventListener('play', () => {
-                console.log("play_vid")
                 const vid_canvas = faceapi.createCanvasFromMedia(this.video)
                 document.body.append(vid_canvas)
                 const displaySize = { width: this.video.width, height: this.video.height }
                 faceapi.matchDimensions(vid_canvas, displaySize)
+                // console.log("start video1");
+                // console.log("start video2");
+                // console.log("start video3");
                 setInterval(async () => {
-                  const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions()
+                  const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
                   const resizedDetections = faceapi.resizeResults(detections, displaySize)
+                
+                  console.log("current emotion",resizedDetections)
                   vid_canvas.getContext('2d').clearRect(0, 0, vid_canvas.width, vid_canvas.height)
-                  faceapi.draw.drawDetections(vid_canvas, resizedDetections)
-                  faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
-                  faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
-                }, 100)
+                // faceapi.draw.drawDetections(vid_canvas, resizedDetections)
+                //   faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
+                //   faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
+                }, 5000)
               })
             this.para = document.createElement("p");
             this.node = document.createTextNode("tasks");

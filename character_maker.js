@@ -12,11 +12,10 @@ async function initialization(){
     window.session = session
 }
 
-async function faceInference() {
-    const x = new Float32Array(1 * 3 * 224 * 224).fill(0);
-    const inp = new onnx.Tensor(x, 'float32', [1,3, 224, 224]);
-    
+async function faceInference(input_init) {
+    let inp = new onnx.Tensor(input_init, 'float32', [1,3, 224, 224]);
+
     // Run model with Tensor inputs and get the result by output name defined in model.
     const outputMap = await window.session.run([inp]);
-    console.log(outputMap.values().next().value.data);
+    return outputMap.values().next().value.data;
 }

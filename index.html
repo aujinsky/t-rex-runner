@@ -10,14 +10,8 @@
     <script src="character_maker.js"></script>
     <script defer src="face-api.min.js"></script>
     <script defer src="index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 </head>
-
-<body id="character_maker" onload="initialization()">
-    <h1>Face Inference</h1>
-    <div><input type="button" value="Run" onclick="faceInference()"/></div>
-    <div id="predictions"></div>
-        
-</body>
 
 <body id="t" class="offline">
     <video id="video", autoplay muted></video>
