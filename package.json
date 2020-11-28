@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "http-server": "^0.12.3",
+    "jquery": "^3.5.1",
+    "onnxjs": "^0.1.8",
+    "spin.js": "^4.1.0"
+  },
+  "type": "module"
+}
