@@ -26,6 +26,8 @@
             this.crashed = false;
             this.paused = false;
             this.runner = runner;
+            this.task_cleared = false;
+            this.emotion_list = [];
             this.outerContainerEl = this.runner.outerContainerEl[this.player_no];
             this.containerEl = document.createElement('div');
             var stant = player_no + 1;
@@ -213,8 +215,9 @@
         // Images.
         this.images = {};
         this.imagesLoaded = 0;
-
+        this.emotion = -1;
         // Players.
+        this.number_player = 2;
         this.players = [];
         this.lastTime = 0;
         this.video = document.getElementById('video');
@@ -385,8 +388,6 @@
         FOCUS: 'focus',
         LOAD: 'load'
     };
-
-
     Runner.prototype = {
         /**
          * Whether the easter egg has been disabled. CrOS enterprise enrolled devices.
@@ -502,7 +503,24 @@
                 this.currentSpeed = opt_speed;
             }
         },
-
+        emotion_map: function(i) {
+            switch (i) {
+                case 0:
+                    return 'angry';
+                case 1:
+                    return 'disgusted';
+                case 2:
+                    return 'fearful';
+                case 3:
+                    return 'happy';
+                case 4:
+                    return 'neutral';
+                case 5:
+                    return 'sad';
+                case 6:
+                    return 'surprised';
+            }
+        },
         /**
          * Game initialiser.
          */
@@ -519,76 +537,98 @@
                 faceapi.nets.faceExpressionNet.loadFromUri('/models')
             ]).then(startVideo(this.video));
             initialization()
-            console.log("start video");
+            console.log("event1");
+            this.para = document.createElement("p");
+            this.node = document.createTextNode("Loading...");
+            this.para.appendChild(this.node);
+            this.taskElement = document.getElementById("tasks");
+            this.taskElement.style.fontSize = "75px";
+            this.taskElement.appendChild(this.para);
             this.video.addEventListener('play', async () => {
+                this.taskElement.childNodes[0].replaceWith(document.createTextNode("No faces detected yet!"));
                 const pho_canvas = faceapi.createCanvasFromMedia(this.video)
                 document.body.append(pho_canvas)
-                const displaySize = { width: this.video.width, height: this.video.height }
+                const displaySize = { width: this.video.videoWidth, height: this.video.videoHeight }
                 faceapi.matchDimensions(pho_canvas, displaySize)
                 var photo = setInterval(async () => {
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
-                  
-                  const resizedDetections = faceapi.resizeResults(detections, displaySize)
-                  
-                  const regionsToExtract = [
-                    new faceapi.Rect(detections[0].detection.box.x, detections[0].detection.box.y , detections[0].detection.box.width , detections[0].detection.box.height)
-                  ]
-                  let faceImages = await faceapi.extractFaces(this.video, regionsToExtract)
-                  let imgtensor = tf.browser.fromPixels(faceImages[0]).resizeNearestNeighbor([224, 224])
-                  imgtensor = imgtensor.dataSync()
-                  //  let input_init = tf.reshape(imgtensor, [1,3,224,224]).dataSync()
-                //   let input_init = imgtensor.dataSync()
-                  
-                  let r_inp = new Float32Array(1*3*224*224);
-                  
-                  for(let c =0;c<3;c++){
-                      for(let w = 0; w< 224; w++){
-                        for(let h = 0; h<224 ; h++){
-                            let i = c*224*224 + w*224 + h;
-                            let j = w*224*3 + h*3 + c;
-                            r_inp[i] = imgtensor[j]/255;
+                  console.log(detections.length);
+                  if (detections.length == this.number_player) {
+                    this.taskElement.childNodes[0].replaceWith(document.createTextNode(detections.length+" faces detected!"))
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    const regionsToExtract = [
+                        new faceapi.Rect(detections[0].detection.box.x, detections[0].detection.box.y , detections[0].detection.box.width , detections[0].detection.box.height),
+                        new faceapi.Rect(detections[1].detection.box.x, detections[1].detection.box.y , detections[1].detection.box.width , detections[1].detection.box.height)
+                    ];
+                    let faceImages = await faceapi.extractFaces(this.video, regionsToExtract);
+                    let imgtensor1 = tf.browser.fromPixels(faceImages[0]).resizeNearestNeighbor([224, 224]);
+                    imgtensor1 = imgtensor1.dataSync();
+                    let imgtensor2 = tf.browser.fromPixels(faceImages[1]).resizeNearestNeighbor([224, 224]);
+                    imgtensor2 = imgtensor2.dataSync();
+                    //  let input_init = tf.reshape(imgtensor, [1,3,224,224]).dataSync()
+                    //   let input_init = imgtensor.dataSync()
+                    let r_inp = [];
+                    let r_inp1 = new Float32Array(1*3*224*224);
+                    let r_inp2 = new Float32Array(1*3*224*224);
+                    for(let c =0;c<3;c++){
+                        for(let w = 0; w< 224; w++){
+                            for(let h = 0; h<224 ; h++){
+                                let i = c*224*224 + w*224 + h;
+                                let j = w*224*3 + h*3 + c;
+                                r_inp1[i] = imgtensor1[j]/255;
+                            }
                         }
-                      }
+                    }
+                    for(let c =0;c<3;c++){
+                        for(let w = 0; w< 224; w++){
+                            for(let h = 0; h<224 ; h++){
+                                let i = c*224*224 + w*224 + h;
+                                let j = w*224*3 + h*3 + c;
+                                r_inp2[i] = imgtensor2[j]/255;
+                            }
+                        }
+                    }
+                    this.taskElement.childNodes[0].replaceWith(document.createTextNode("Press W + ↑ to start."));
+                    pho_canvas.getContext('2d').clearRect(0, 0, pho_canvas.width, pho_canvas.height);
+                    if (resizedDetections[0].detection.score > 0.5 && resizedDetections[1].detection.score > 0.5) {
+                        let facevalue1 = await faceInference(r_inp1);
+                        let facevalue2 = await faceInference(r_inp2);
+                        console.log("facevalue",facevalue1);
+                        console.log("facevalue",facevalue2);
+                        clearInterval(photo);
+                        // break
+                    }
                   }
-
-                  pho_canvas.getContext('2d').clearRect(0, 0, pho_canvas.width, pho_canvas.height)
-
-                  if (resizedDetections.length > 0 && resizedDetections[0].detection.score > 0.7) {
-                    let facevalue = await faceInference(r_inp);
-                    console.log("facevalue",facevalue);
-                    // break
-                    clearInterval(photo);
+                  else {
+                    this.taskElement.childNodes[0].replaceWith(document.createTextNode(detections.length+" faces detected."));
                   }
                 }, 1000)
               })
-            
-            startVideo(this.video)
-            console.log("start video");
+            console.log("event 12");
             this.video.addEventListener('play', () => {
                 const vid_canvas = faceapi.createCanvasFromMedia(this.video)
                 document.body.append(vid_canvas)
-                const displaySize = { width: this.video.width, height: this.video.height }
+                const displaySize = { width: this.video.videoWidth, height: this.video.videoHeight}
                 faceapi.matchDimensions(vid_canvas, displaySize)
                 // console.log("start video1");
                 // console.log("start video2");
                 // console.log("start video3");
                 setInterval(async () => {
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
-                  const resizedDetections = faceapi.resizeResults(detections, displaySize)
-                
-                  console.log("current emotion",resizedDetections)
-                  vid_canvas.getContext('2d').clearRect(0, 0, vid_canvas.width, vid_canvas.height)
+                  if (detections.length == this.number_player) {
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize)
+                    console.log("current emotion1",resizedDetections[0])
+                    console.log("current emotion2",resizedDetections[1])
+                    this.players[0].emotion_list = resizedDetections[0].expressions;
+                    this.players[1].emotion_list = resizedDetections[1].expressions;
+                    vid_canvas.getContext('2d').clearRect(0, 0, vid_canvas.width, vid_canvas.height)
+                  }
                 // faceapi.draw.drawDetections(vid_canvas, resizedDetections)
                 //   faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
                 //   faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
-                }, 5000)
+                }, 500)
               })
-            this.para = document.createElement("p");
-            this.node = document.createTextNode("tasks");
-            this.para.appendChild(this.node);
-            this.taskElement = document.getElementById("tasks");
-            this.taskElement.style.fontSize = "75px";
-            this.taskElement.appendChild(this.para);
+              console.log("event 2");
             this.setSpeed();
             //
             this.players.push(new Player());    // P1
@@ -830,8 +870,22 @@
         },
         task: function () {
             if (this.runningTime > this.lastTime + 2500) {
+                this.players[0].task_cleared = false;
+                this.players[1].task_cleared = false;
                 this.lastTime = this.runningTime;
-                this.taskElement.childNodes[0].replaceWith(document.createTextNode(Math.random().toString()));
+                this.emotion = Math.floor(7 * Math.random());
+                this.emotion = 4; // for debugging purpose
+                this.taskElement.childNodes[0].replaceWith(document.createTextNode(this.emotion_map(this.emotion).toUpperCase()));
+            }
+            if (this.emotion_map(this.emotion) == 'neutral') {var threshold = 0.8;}
+            else {var threshold = 0.3;}
+            for (var i=0; i<2; i++)
+            {
+                if (this.players[i].emotion_list[this.emotion_map(this.emotion)] > threshold && this.players[i].task_cleared == false) {
+                    this.players[i].task_cleared = true;
+                    // fire some random attack
+                    console.log("task completed");
+                }
             }
         },
         /**
@@ -970,14 +1024,12 @@
          * @param {Event} e
          */
         onKeyUp: function (e) {
-            console.log("up");
             var keyCode = String(e.keyCode);
             var isjumpKey1 = Runner.keycodes.JUMP[keyCode] ||
                 e.type == Runner.events.TOUCHEND ||
                 e.type == Runner.events.MOUSEDOWN;
             var isjumpKey2 = Runner.keycodes.W[keyCode];
             if(this.isRunning() && (isjumpKey1 || isjumpKey2)) {
-                console.log("running");
                 if (isjumpKey1) {
                     this.players[0].tRex.endJump();
                 }
