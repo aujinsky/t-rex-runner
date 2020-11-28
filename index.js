@@ -29,7 +29,8 @@
             this.outerContainerEl = this.runner.outerContainerEl[this.player_no];
             this.containerEl = document.createElement('div');
             var stant = player_no + 1;
-            this.containerEl.className = Runner.classes.CONTAINER + stant;
+            this.containerEl.className = Runner.classes.CONTAINER + stant.toString();
+            console.log(this.containerEl.className);
             // Player canvas container.
             this.canvas = createCanvas(this.containerEl, this.runner.dimensions.WIDTH,
             this.runner.dimensions.HEIGHT, Runner.classes.PLAYER);

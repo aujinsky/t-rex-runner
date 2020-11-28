@@ -10,15 +10,17 @@ html, body {
 }
 video {
   position: absolute;
-  width: 360px;
-  height: 560px;
-  left: 50%;
-  transform: translate(-50%, 0);
+  width: 540px;
+  height: 420px;
+  top: 45%;
+  left: 20%;
+  transform: translate(-50%, -50%);
 }
 #tasks {
   position: absolute;
   text-align: center;
-  left: 50%;
+  top: 45%;
+  left: 65%;
   transform: translate(-50%, -50%);
 }
 .icon {
@@ -46,7 +48,7 @@ video {
   margin: 0 auto;
   max-width: 600px;
   padding-top: 100px;
-  width: 100%;
+  width: 90%;
 }
 
 .offline .runner-container1 {
@@ -54,7 +56,17 @@ video {
   max-width: 600px;
   overflow: hidden;
   position: absolute;
-  top: 500px;
+  top: 57%;
+  left: 40%;
+  width: 44px;
+}
+.offline .runner-container2 {
+  height: 150px;
+  max-width: 600px;
+  overflow: hidden;
+  position: absolute;
+  top: 7%;
+  left: 40%;
   width: 44px;
 }
 
