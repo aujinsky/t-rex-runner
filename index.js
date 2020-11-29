@@ -456,15 +456,15 @@
         loadImages: function () {
             Runner.imageSprite = [];
             if (IS_HIDPI) {
-                Runner.imageSprite[0] = document.getElementById('offline-resources-21');
+                Runner.imageSprite[2] = document.getElementById('offline-resources-21');
                 Runner.imageSprite[1] = document.getElementById('offline-resources-22');
-                Runner.imageSprite[2] = document.getElementById('offline-resources-23');
+                Runner.imageSprite[0] = document.getElementById('offline-resources-23');
                 this.spriteDef = Runner.spriteDefinition.HDPI;
             }
             else {
-                Runner.imageSprite[0] = document.getElementById('offline-resources-11');
+                Runner.imageSprite[2] = document.getElementById('offline-resources-11');
                 Runner.imageSprite[1] = document.getElementById('offline-resources-12');
-                Runner.imageSprite[2] = document.getElementById('offline-resources-13');
+                Runner.imageSprite[0] = document.getElementById('offline-resources-13');
                 this.spriteDef = Runner.spriteDefinition.LDPI;
             }
             // should load default images
