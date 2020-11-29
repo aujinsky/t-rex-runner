@@ -18,7 +18,7 @@
     function Player() {
     }
     Player.prototype = {
-        init: function(runner, player_no) {
+        init: function(runner, player_no, max) {
             this.distanceRan = 0;
             this.collision = false;
             this.player_no = player_no
@@ -31,13 +31,15 @@
             this.emotion_list = [];
             this.speed_multiplier = 1;
             this.gap_multiplier = 1.5;
+            this.sprite = max;
+            console.log(this.sprite);
             this.outerContainerEl = this.runner.outerContainerEl[this.player_no];
             this.containerEl = document.createElement('div');
             var stant = player_no + 1;
             this.containerEl.className = Runner.classes.CONTAINER + stant.toString();
             // Player canvas container.
             this.canvas = createCanvas(this.containerEl, this.runner.dimensions.WIDTH,
-            this.runner.dimensions.HEIGHT, Runner.classes.PLAYER);
+            this.runner.dimensions.HEIGHT, Runner.classes.PLAYER, this.sprite);
 
             this.canvasCtx = this.canvas.getContext('2d');
             this.canvasCtx.fillStyle = '#f7f7f7';
@@ -50,14 +52,14 @@
             this.stateElement.appendChild(this.div);
             // Horizon contains clouds, obstacles and the ground.
             this.horizon = new Horizon(this.canvas, this.runner.spriteDef, this.runner.dimensions,
-                this.runner.config.GAP_COEFFICIENT);
+                this.runner.config.GAP_COEFFICIENT, this.sprite);
 
             // Distance meter
             this.distanceMeter = new DistanceMeter(this.canvas,
-                this.runner.spriteDef.TEXT_SPRITE, this.runner.dimensions.WIDTH);
+                this.runner.spriteDef.TEXT_SPRITE, this.runner.dimensions.WIDTH, this.sprite);
 
             // Draw t-rex
-            this.tRex = new Trex(this.canvas, this.runner.spriteDef.TREX);
+            this.tRex = new Trex(this.canvas, this.runner.spriteDef.TREX, this.sprite);
             this.outerContainerEl.appendChild(this.containerEl)
         },
         /**
@@ -134,7 +136,7 @@
             if (!this.gameOverPanel) {
                 this.gameOverPanel = new GameOverPanel(this.canvas,
                     this.runner.spriteDef.TEXT_SPRITE, this.runner.spriteDef.RESTART,
-                    this.runner.dimensions);
+                    this.runner.dimensions, this.sprite);
             } else {
                 this.gameOverPanel.draw();
             }
@@ -452,19 +454,25 @@
          * definition.
          */
         loadImages: function () {
+            Runner.imageSprite = [];
             if (IS_HIDPI) {
-                Runner.imageSprite = document.getElementById('offline-resources-2x');
+                Runner.imageSprite[0] = document.getElementById('offline-resources-21');
+                Runner.imageSprite[1] = document.getElementById('offline-resources-22');
+                Runner.imageSprite[2] = document.getElementById('offline-resources-23');
                 this.spriteDef = Runner.spriteDefinition.HDPI;
-            } else {
-                Runner.imageSprite = document.getElementById('offline-resources-1x');
+            }
+            else {
+                Runner.imageSprite[0] = document.getElementById('offline-resources-11');
+                Runner.imageSprite[1] = document.getElementById('offline-resources-12');
+                Runner.imageSprite[2] = document.getElementById('offline-resources-13');
                 this.spriteDef = Runner.spriteDefinition.LDPI;
             }
-
-            if (Runner.imageSprite.complete) {
+            // should load default images
+            if (Runner.imageSprite[0].complete && Runner.imageSprite[1].complete && Runner.imageSprite[2].complete) {
                 this.init();
             } else {
                 // If the images are not yet loaded, add a listener.
-                Runner.imageSprite.addEventListener(Runner.events.LOAD,
+                Runner.imageSprite[2].addEventListener(Runner.events.LOAD,  // buggy
                     this.init.bind(this));
             }
         },
@@ -543,6 +551,8 @@
                 faceapi.nets.faceExpressionNet.loadFromUri('/models')
             ]).then(startVideo(this.video));
             initialization();
+            this.max1 = -1;
+            this.max2 = -1;
             this.para = document.createElement("p");
             this.node = document.createTextNode("Loading...");
             this.para.appendChild(this.node);
@@ -556,6 +566,7 @@
                 const displaySize = { width: this.video.videoWidth, height: this.video.videoHeight }
                 faceapi.matchDimensions(pho_canvas, displaySize)
                 var photo = setInterval(async () => {
+                    console.log("spin");
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
                   if (detections.length == this.number_player) {
                     this.taskElement.childNodes[0].replaceWith(document.createTextNode(detections.length+" faces detected!"))
@@ -605,27 +616,23 @@
                         let facevalue2 = await faceInference(r_inp2);
                         console.log("facevalue",facevalue1);
                         console.log("facevalue",facevalue2);
-                        let max1=0;
-                        let max2=0;
+                        var temp_max1;
+                        var temp_max2=0;
 
                         for(let i=0;i<3;i++){
-                            if(facevalue1[i]>=facevalue1[max1]){
-                                max1 = i;
+                            if(facevalue1[i]>=facevalue1[temp_max1]){
+                                temp_max1 = i;
                             }
-                            if(facevalue2[i]>=facevalue2[max2]){
-                                max2 = i;
+                            if(facevalue2[i]>=facevalue2[temp_max2]){
+                                temp_max2 = i;
                             }
                         }
-                        let paths = ["assets/default_200_percent/200-offline-sprite-bald.png",
-                                    "assets/default_200_percent/200-offline-sprite-bear.png",
-                                    "assets/default_200_percent/200-offline-sprite.png"]
-                        let doc1 = document.getElementById("offline-resources-1x")
-                        let doc2 = document.getElementById("offline-resources-2x")
-                        doc1.src = paths[max1]
-                        doc2.src = paths[max2]
+                        this.max1 = temp_max1;
+                        this.max2 = temp_max2;
                         this.startListening();
                         clearInterval(photo);
                         // break
+                        this.setSpeed();
                     }
                   }
                   else {
@@ -659,23 +666,24 @@
                 //   faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
                 //   faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
                 }, 300)
+                this.players.push(new Player());    // P1
+                this.players.push(new Player());    // P2
+                while(this.max1 == -1 || this.max2 == -1) {} // wait
+                console.log(this.max1);
+                console.log(this.max2);
+                this.players[0].init(this, 0, this.max1);
+                this.players[1].init(this, 1, this.max2);
+                this.adjustDimensions();
+    
+                if (IS_MOBILE) {
+                    this.createTouchController();
+                }
+    
+                this.update();
+    
+                window.addEventListener(Runner.events.RESIZE,
+                    this.debounceResize.bind(this));
               })
-            this.setSpeed();
-            //
-            this.players.push(new Player());    // P1
-            this.players.push(new Player());    // P2
-            this.players[0].init(this, 0);
-            this.players[1].init(this, 1);
-            this.adjustDimensions();
-
-            if (IS_MOBILE) {
-                this.createTouchController();
-            }
-
-            this.update();
-
-            window.addEventListener(Runner.events.RESIZE,
-                this.debounceResize.bind(this));
         },
 
         debounceResize: function() {
@@ -1359,12 +1367,13 @@
      * @param {!Object} dimensions Canvas dimensions.
      * @constructor
      */
-    function GameOverPanel(canvas, textImgPos, restartImgPos, dimensions) {
+    function GameOverPanel(canvas, textImgPos, restartImgPos, dimensions, sprite) {
         this.canvas = canvas;
         this.canvasCtx = canvas.getContext('2d');
         this.canvasDimensions = dimensions;
         this.textImgPos = textImgPos;
         this.restartImgPos = restartImgPos;
+        this.sprite = sprite;
         this.draw();
     };
 
@@ -1433,12 +1442,12 @@
             textSourceY += this.textImgPos.y;
 
             // Game over text from sprite.
-            this.canvasCtx.drawImage(Runner.imageSprite,
+            this.canvasCtx.drawImage(Runner.imageSprite[this.sprite],
                 textSourceX, textSourceY, textSourceWidth, textSourceHeight,
                 textTargetX, textTargetY, textTargetWidth, textTargetHeight);
 
             // Restart button.
-            this.canvasCtx.drawImage(Runner.imageSprite,
+            this.canvasCtx.drawImage(Runner.imageSprite[this.sprite],
                 this.restartImgPos.x, this.restartImgPos.y,
                 restartSourceWidth, restartSourceHeight,
                 restartTargetX, restartTargetY, dimensions.RESTART_WIDTH,
@@ -1596,7 +1605,7 @@
      * @param {number} opt_xOffset
      */
     function Obstacle(canvasCtx, type, spriteImgPos, dimensions,
-        gapCoefficient, speed, opt_xOffset) {
+        gapCoefficient, speed, opt_xOffset, sprite) {
 
         this.canvasCtx = canvasCtx;
         this.spritePos = spriteImgPos;
@@ -1611,7 +1620,7 @@
         this.collisionBoxes = [];
         this.gap = 0;
         this.speedOffset = 0;
-
+        this.sprite = sprite;
         // For animated obstacles.
         this.currentFrame = 0;
         this.timer = 0;
@@ -1701,8 +1710,7 @@
                 if (this.currentFrame > 0) {
                     sourceX += sourceWidth * this.currentFrame;
                 }
-
-                this.canvasCtx.drawImage(Runner.imageSprite,
+                this.canvasCtx.drawImage(Runner.imageSprite[this.sprite],
                     sourceX, this.spritePos.y,
                     sourceWidth * this.size, sourceHeight,
                     this.xPos, this.yPos,
@@ -1843,7 +1851,7 @@
      * @param {Object} spritePos Positioning within image sprite.
      * @constructor
      */
-    function Trex(canvas, spritePos) {
+    function Trex(canvas, spritePos, sprite) {
         this.canvas = canvas;
         this.canvasCtx = canvas.getContext('2d');
         this.spritePos = spritePos;
@@ -1869,7 +1877,7 @@
         this.speedDrop = false;
         this.jumpCount = 0;
         this.jumpspotX = 0;
-
+        this.sprite = sprite;
         this.init();
     };
 
@@ -2056,7 +2064,7 @@
 
             // Ducking.
             if (this.ducking && this.status != Trex.status.CRASHED) {
-                this.canvasCtx.drawImage(Runner.imageSprite, sourceX, sourceY,
+                this.canvasCtx.drawImage(Runner.imageSprite[this.sprite], sourceX, sourceY,
                     sourceWidth, sourceHeight,
                     this.xPos, this.yPos,
                     this.config.WIDTH_DUCK, this.config.HEIGHT);
@@ -2066,7 +2074,7 @@
                     this.xPos++;
                 }
                 // Standing / running
-                this.canvasCtx.drawImage(Runner.imageSprite, sourceX, sourceY,
+                this.canvasCtx.drawImage(Runner.imageSprite[this.sprite], sourceX, sourceY,
                     sourceWidth, sourceHeight,
                     this.xPos, this.yPos,
                     this.config.WIDTH, this.config.HEIGHT);
@@ -2208,10 +2216,10 @@
      * @param {number} canvasWidth
      * @constructor
      */
-    function DistanceMeter(canvas, spritePos, canvasWidth) {
+    function DistanceMeter(canvas, spritePos, canvasWidth, sprite) {
         this.canvas = canvas;
         this.canvasCtx = canvas.getContext('2d');
-        this.image = Runner.imageSprite;
+        this.image = Runner.imageSprite[sprite];
         this.spritePos = spritePos;
         this.x = 0;
         this.y = 5;
@@ -2479,7 +2487,6 @@
         this.remove = false;
         this.cloudGap = getRandomNum(Cloud.config.MIN_CLOUD_GAP,
             Cloud.config.MAX_CLOUD_GAP);
-
         this.init();
     };
 
@@ -2521,7 +2528,7 @@
                 sourceHeight = sourceHeight * 2;
             }
 
-            this.canvasCtx.drawImage(Runner.imageSprite, this.spritePos.x,
+            this.canvasCtx.drawImage(Runner.imageSprite[0], this.spritePos.x,   // cloud is sprite irrelevant
                 this.spritePos.y,
                 sourceWidth, sourceHeight,
                 this.xPos, this.yPos,
@@ -2561,7 +2568,7 @@
     /**
      * Nightmode shows a moon and stars on the horizon.
      */
-    function NightMode(canvas, spritePos, containerWidth) {
+    function NightMode(canvas, spritePos, containerWidth, sprite) {
         this.spritePos = spritePos;
         this.canvas = canvas;
         this.canvasCtx = canvas.getContext('2d');
@@ -2571,6 +2578,7 @@
         this.opacity = 0;
         this.containerWidth = containerWidth;
         this.stars = [];
+        this.sprite = sprite;
         this.drawStars = false;
         this.placeStars();
     };
@@ -2666,7 +2674,7 @@
             // Stars.
             if (this.drawStars) {
                 for (var i = 0; i < NightMode.config.NUM_STARS; i++) {
-                    this.canvasCtx.drawImage(Runner.imageSprite,
+                    this.canvasCtx.drawImage(Runner.imageSprite[this.sprite],
                         starSourceX, this.stars[i].sourceY, starSize, starSize,
                         Math.round(this.stars[i].x), this.stars[i].y,
                         NightMode.config.STAR_SIZE, NightMode.config.STAR_SIZE);
@@ -2674,7 +2682,7 @@
             }
 
             // Moon.
-            this.canvasCtx.drawImage(Runner.imageSprite, moonSourceX,
+            this.canvasCtx.drawImage(Runner.imageSprite[this.sprite], moonSourceX,
                 this.spritePos.y, moonSourceWidth, moonSourceHeight,
                 Math.round(this.xPos), this.yPos,
                 moonOutputWidth, NightMode.config.HEIGHT);
@@ -2721,7 +2729,7 @@
      * @param {Object} spritePos Horizon position in sprite.
      * @constructor
      */
-    function HorizonLine(canvas, spritePos) {
+    function HorizonLine(canvas, spritePos, sprite) {
         this.spritePos = spritePos;
         this.canvas = canvas;
         this.canvasCtx = canvas.getContext('2d');
@@ -2732,7 +2740,7 @@
         this.xPos = [];
         this.yPos = 0;
         this.bumpThreshold = 0.5;
-
+        this.sprite = sprite;
         this.setSourceDimensions();
         this.draw();
     };
@@ -2783,13 +2791,13 @@
          * Draw the horizon line.
          */
         draw: function () {
-            this.canvasCtx.drawImage(Runner.imageSprite, this.sourceXPos[0],
+            this.canvasCtx.drawImage(Runner.imageSprite[this.sprite], this.sourceXPos[0],
                 this.spritePos.y,
                 this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
                 this.xPos[0], this.yPos,
                 this.dimensions.WIDTH, this.dimensions.HEIGHT);
 
-            this.canvasCtx.drawImage(Runner.imageSprite, this.sourceXPos[1],
+            this.canvasCtx.drawImage(Runner.imageSprite[this.sprite], this.sourceXPos[1],
                 this.spritePos.y,
                 this.sourceDimensions.WIDTH, this.sourceDimensions.HEIGHT,
                 this.xPos[1], this.yPos,
@@ -2851,7 +2859,7 @@
      * @param {number} gapCoefficient
      * @constructor
      */
-    function Horizon(canvas, spritePos, dimensions, gapCoefficient) {
+    function Horizon(canvas, spritePos, dimensions, gapCoefficient, sprite) {
         this.canvas = canvas;
         this.canvasCtx = this.canvas.getContext('2d');
         this.config = Horizon.config;
@@ -2864,7 +2872,7 @@
         this.cloudFrequency = this.config.CLOUD_FREQUENCY;
         this.spritePos = spritePos;
         this.nightMode = null;
-
+        this.sprite = sprite;
         // Cloud
         this.clouds = [];
         this.cloudSpeed = this.config.BG_CLOUD_SPEED;
@@ -2894,9 +2902,9 @@
          */
         init: function () {
             this.addCloud();
-            this.horizonLine = new HorizonLine(this.canvas, this.spritePos.HORIZON);
+            this.horizonLine = new HorizonLine(this.canvas, this.spritePos.HORIZON, this.sprite);
             this.nightMode = new NightMode(this.canvas, this.spritePos.MOON,
-                this.dimensions.WIDTH);
+                this.dimensions.WIDTH, this.sprite);
         },
 
         /**
@@ -3007,7 +3015,7 @@
 
                 this.obstacles.push(new Obstacle(this.canvasCtx, obstacleType,
                     obstacleSpritePos, this.dimensions,
-                    this.gapCoefficient, currentSpeed, obstacleType.width));
+                    this.gapCoefficient, currentSpeed, obstacleType.width, this.sprite));
 
                 this.obstacleHistory.unshift(obstacleType.type);
 
