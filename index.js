@@ -35,7 +35,6 @@
             this.containerEl = document.createElement('div');
             var stant = player_no + 1;
             this.containerEl.className = Runner.classes.CONTAINER + stant.toString();
-            console.log(this.containerEl.className);
             // Player canvas container.
             this.canvas = createCanvas(this.containerEl, this.runner.dimensions.WIDTH,
             this.runner.dimensions.HEIGHT, Runner.classes.PLAYER);
@@ -49,8 +48,6 @@
             this.stateElement = document.getElementById('state'+stant.toString());
             this.stateElement.style.fontSize = "30px";
             this.stateElement.appendChild(this.div);
-            console.log(this.stateElement.childNodes);
-            console.log(this.stateElement.childNodes[0]);
             // Horizon contains clouds, obstacles and the ground.
             this.horizon = new Horizon(this.canvas, this.runner.spriteDef, this.runner.dimensions,
                 this.runner.config.GAP_COEFFICIENT);
@@ -545,8 +542,7 @@
                 // faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
                 faceapi.nets.faceExpressionNet.loadFromUri('/models')
             ]).then(startVideo(this.video));
-            initialization()
-            console.log("event1");
+            initialization();
             this.para = document.createElement("p");
             this.node = document.createTextNode("Loading...");
             this.para.appendChild(this.node);
@@ -561,7 +557,6 @@
                 faceapi.matchDimensions(pho_canvas, displaySize)
                 var photo = setInterval(async () => {
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
-                  console.log(detections.length);
                   if (detections.length == this.number_player) {
                     this.taskElement.childNodes[0].replaceWith(document.createTextNode(detections.length+" faces detected!"))
                     const resizedDetections = faceapi.resizeResults(detections, displaySize);
@@ -614,15 +609,11 @@
                   }
                 }, 1000)
               })
-            console.log("event 12");
             this.video.addEventListener('play', () => {
                 const vid_canvas = faceapi.createCanvasFromMedia(this.video)
                 document.body.append(vid_canvas)
                 const displaySize = { width: this.video.videoWidth, height: this.video.videoHeight}
                 faceapi.matchDimensions(vid_canvas, displaySize)
-                // console.log("start video1");
-                // console.log("start video2");
-                // console.log("start video3");
                 setInterval(async () => {
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
                   if (detections.length == this.number_player) {
@@ -636,9 +627,8 @@
                 // faceapi.draw.drawDetections(vid_canvas, resizedDetections)
                 //   faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
                 //   faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
-                }, 500)
+                }, 300)
               })
-              console.log("event 2");
             this.setSpeed();
             //
             this.players.push(new Player());    // P1
@@ -834,7 +824,6 @@
                     this.players[1].distanceMeter.update(deltaTime,
                         Math.ceil(this.players[1].distanceRan));
                     this.players[1].gameOver();
-                    console.log(1);
                 }
                 
                 // calculate meter using player 1
@@ -901,7 +890,6 @@
                 this.players[1].horizon.gapCoefficient2 = 1.5;
                 this.lastTime = this.runningTime;
                 this.emotion = Math.floor(7 * Math.random());
-                this.emotion = 4 + 2 * Math.floor(2 * Math.random()); // for debugging purpose
                 this.taskElement.childNodes[0].replaceWith(document.createTextNode(this.emotion_map(this.emotion).toUpperCase()));
                 this.show_state(0, false, false);
                 this.show_state(1, false, false);
@@ -1083,7 +1071,7 @@
                 this.players[1].tRex.speedDrop = false;
                 this.players[1].tRex.setDuck(false);
             } else if (!this.crashed && Runner.keycodes.I[keyCode]) {
-                console.log("I");
+                // console.log("I");
             } else if (this.crashed) {
                 // Check that enough time has elapsed before allowing jump key to restart.
                 var deltaTime = getTimeStamp() - this.time;
