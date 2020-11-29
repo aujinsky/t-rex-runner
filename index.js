@@ -27,7 +27,10 @@
             this.paused = false;
             this.runner = runner;
             this.task_cleared = false;
+            this.attacked = false;
             this.emotion_list = [];
+            this.speed_multiplier = 1;
+            this.gap_multiplier = 1.5;
             this.outerContainerEl = this.runner.outerContainerEl[this.player_no];
             this.containerEl = document.createElement('div');
             var stant = player_no + 1;
@@ -41,7 +44,13 @@
             this.canvasCtx.fillStyle = '#f7f7f7';
             this.canvasCtx.fill();
             Runner.updateCanvasScaling(this.canvas);
-
+            this.div = document.createElement("div");
+            this.div.innerHTML = '[status]<br/>task: X<br/>';
+            this.stateElement = document.getElementById('state'+stant.toString());
+            this.stateElement.style.fontSize = "30px";
+            this.stateElement.appendChild(this.div);
+            console.log(this.stateElement.childNodes);
+            console.log(this.stateElement.childNodes[0]);
             // Horizon contains clouds, obstacles and the ground.
             this.horizon = new Horizon(this.canvas, this.runner.spriteDef, this.runner.dimensions,
                 this.runner.config.GAP_COEFFICIENT);
@@ -595,6 +604,7 @@
                         let facevalue2 = await faceInference(r_inp2);
                         console.log("facevalue",facevalue1);
                         console.log("facevalue",facevalue2);
+                        this.startListening();
                         clearInterval(photo);
                         // break
                     }
@@ -641,7 +651,6 @@
                 this.createTouchController();
             }
 
-            this.startListening();
             this.update();
 
             window.addEventListener(Runner.events.RESIZE,
@@ -773,11 +782,11 @@
                 } else {
                     deltaTime = !this.activated ? 0 : deltaTime;
                     if (this.players[0].playing) {
-                        this.players[0].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
+                        this.players[0].horizon.update(deltaTime, this.players[0].speed_multiplier * this.currentSpeed, hasObstacles,
                             this.inverted);
                     }
                     if (this.players[1].playing) {
-                        this.players[1].horizon.update(deltaTime, this.currentSpeed, hasObstacles,
+                        this.players[1].horizon.update(deltaTime, this.players[1].speed_multiplier * this.currentSpeed, hasObstacles,
                             this.inverted);
                     }
                 }
@@ -868,14 +877,34 @@
                 this.scheduleNextUpdate();
             }
         },
+        show_state: function (player_no, tasked, attacked) {
+            this.players[player_no].stateElement.removeChild(this.players[player_no].div);
+            this.players[player_no].div = document.createElement("div");
+            if (tasked == true) {var char1 = 'O';}
+            else {var char1 = 'X';}
+            if (attacked == true) {var char2 = 'O';}
+            else {var char2 = 'X';}
+            this.players[player_no].div.innerHTML = '[status]<br/>task: '+char1+'<br/>attacked: '+char2;
+            this.players[player_no].stateElement = document.getElementById('state'+(player_no+1).toString());
+            this.players[player_no].stateElement.style.fontSize = "30px";
+            this.players[player_no].stateElement.appendChild(this.players[player_no].div);
+        },
         task: function () {
-            if (this.runningTime > this.lastTime + 2500) {
+            if (this.runningTime > this.lastTime + 1500) {
                 this.players[0].task_cleared = false;
                 this.players[1].task_cleared = false;
+                this.players[0].attacked = false;
+                this.players[1].attacked = false;
+                this.players[0].speed_multiplier = 1.2;
+                this.players[1].speed_multiplier = 1.2;
+                this.players[0].horizon.gapCoefficient2 = 1.5;
+                this.players[1].horizon.gapCoefficient2 = 1.5;
                 this.lastTime = this.runningTime;
                 this.emotion = Math.floor(7 * Math.random());
-                this.emotion = 4; // for debugging purpose
+                this.emotion = 4 + 2 * Math.floor(2 * Math.random()); // for debugging purpose
                 this.taskElement.childNodes[0].replaceWith(document.createTextNode(this.emotion_map(this.emotion).toUpperCase()));
+                this.show_state(0, false, false);
+                this.show_state(1, false, false);
             }
             if (this.emotion_map(this.emotion) == 'neutral') {var threshold = 0.8;}
             else {var threshold = 0.3;}
@@ -884,9 +913,20 @@
                 if (this.players[i].emotion_list[this.emotion_map(this.emotion)] > threshold && this.players[i].task_cleared == false) {
                     this.players[i].task_cleared = true;
                     // fire some random attack
-                    console.log("task completed");
+                    this.attack(1-i);
+                    this.show_state(i, true, this.players[i].attacked);
+                    this.show_state(1-i, this.players[1-i].task_cleared, this.players[1-i].attacked);
+                    console.log('task completed');
+                    
                 }
             }
+        },
+        attack: function (i) {
+            this.players[i].attacked = true;
+            var attack_var = Math.floor(3 * Math.random());
+            if (attack_var == 0) {this.players[i].speed_multiplier = 1.3 + Math.random()*0.3;}
+            if (attack_var == 1) {this.players[i].speed_multiplier = 0.9;}
+            if (attack_var == 2) {this.players[i].horizon.gapCoefficient2 = 1.3;}
         },
         /**
          * Event handler.
@@ -2798,6 +2838,7 @@
         this.config = Horizon.config;
         this.dimensions = dimensions;
         this.gapCoefficient = gapCoefficient;
+        this.gapCoefficient2 = 1.5;
         this.obstacles = [];
         this.obstacleHistory = [];
         this.horizonOffsets = [0, 0];
@@ -2912,10 +2953,9 @@
 
             if (this.obstacles.length > 0) {
                 var lastObstacle = this.obstacles[this.obstacles.length - 1];
-
                 if (lastObstacle && !lastObstacle.followingObstacleCreated &&
                     lastObstacle.isVisible() &&
-                    1.5 * (lastObstacle.xPos + lastObstacle.width + lastObstacle.gap) <
+                    this.gapCoefficient2 * (lastObstacle.xPos + lastObstacle.width + lastObstacle.gap) <
                     this.dimensions.WIDTH) {
                     this.addNewObstacle(currentSpeed);
                     lastObstacle.followingObstacleCreated = true;

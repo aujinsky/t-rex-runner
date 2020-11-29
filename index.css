@@ -23,6 +23,16 @@ video {
   left: 65%;
   transform: translate(-50%, -50%);
 }
+#state1 {
+  position: absolute;
+  top: 62%;
+  left: 85%;
+}
+#state2 {
+  position: absolute;
+  top: 12%;
+  left: 85%;
+}
 .icon {
   -webkit-user-select: none;
   user-select: none;
