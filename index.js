@@ -605,6 +605,24 @@
                         let facevalue2 = await faceInference(r_inp2);
                         console.log("facevalue",facevalue1);
                         console.log("facevalue",facevalue2);
+                        let max1=0;
+                        let max2=0;
+
+                        for(let i=0;i<3;i++){
+                            if(facevalue1[i]>=facevalue1[max1]){
+                                max1 = i;
+                            }
+                            if(facevalue2[i]>=facevalue2[max2]){
+                                max2 = i;
+                            }
+                        }
+                        let paths = ["assets/default_200_percent/200-offline-sprite-bald.png",
+                                    "assets/default_200_percent/200-offline-sprite-bear.png",
+                                    "assets/default_200_percent/200-offline-sprite.png"]
+                        let doc1 = document.getElementById("offline-resources-1x")
+                        let doc2 = document.getElementById("offline-resources-2x")
+                        doc1.src = paths[max1]
+                        doc2.src = paths[max2]
                         this.startListening();
                         clearInterval(photo);
                         // break
@@ -624,10 +642,17 @@
                   const detections = await faceapi.detectAllFaces(this.video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions()
                   if (detections.length == this.number_player) {
                     const resizedDetections = faceapi.resizeResults(detections, displaySize)
-                    console.log("current emotion1",resizedDetections[0])
-                    console.log("current emotion2",resizedDetections[1])
-                    this.players[0].emotion_list = resizedDetections[0].expressions;
-                    this.players[1].emotion_list = resizedDetections[1].expressions;
+
+                    if (detections[0].detection.box.x < detections[1].detection.box.x) {
+                        var t = 0;
+                    }
+                    else {
+                        var t = 1;
+                    }
+                    console.log("current emotion1",resizedDetections[t])
+                    console.log("current emotion2",resizedDetections[1-t])
+                    this.players[0].emotion_list = resizedDetections[t].expressions;
+                    this.players[1].emotion_list = resizedDetections[1-t].expressions;
                     vid_canvas.getContext('2d').clearRect(0, 0, vid_canvas.width, vid_canvas.height)
                   }
                 // faceapi.draw.drawDetections(vid_canvas, resizedDetections)
