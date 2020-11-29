@@ -560,9 +560,15 @@
                   if (detections.length == this.number_player) {
                     this.taskElement.childNodes[0].replaceWith(document.createTextNode(detections.length+" faces detected!"))
                     const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    if (detections[0].detection.box.x < detections[1].detection.box.x) {
+                        var t = 0;
+                    }
+                    else {
+                        var t = 1;
+                    }
                     const regionsToExtract = [
-                        new faceapi.Rect(detections[0].detection.box.x, detections[0].detection.box.y , detections[0].detection.box.width , detections[0].detection.box.height),
-                        new faceapi.Rect(detections[1].detection.box.x, detections[1].detection.box.y , detections[1].detection.box.width , detections[1].detection.box.height)
+                        new faceapi.Rect(detections[t].detection.box.x, detections[t].detection.box.y , detections[t].detection.box.width , detections[t].detection.box.height),
+                        new faceapi.Rect(detections[1-t].detection.box.x, detections[1-t].detection.box.y , detections[1-t].detection.box.width , detections[1-t].detection.box.height)
                     ];
                     let faceImages = await faceapi.extractFaces(this.video, regionsToExtract);
                     let imgtensor1 = tf.browser.fromPixels(faceImages[0]).resizeNearestNeighbor([224, 224]);
