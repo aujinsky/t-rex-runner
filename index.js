@@ -616,7 +616,7 @@
                         let facevalue2 = await faceInference(r_inp2);
                         console.log("facevalue",facevalue1);
                         console.log("facevalue",facevalue2);
-                        var temp_max1;
+                        var temp_max1=0;
                         var temp_max2=0;
 
                         for(let i=0;i<3;i++){
@@ -627,18 +627,31 @@
                                 temp_max2 = i;
                             }
                         }
-                        this.max1 = temp_max1;
-                        this.max2 = temp_max2;
                         this.startListening();
                         clearInterval(photo);
+                        this.max1 = temp_max1;
+                        this.max2 = temp_max2;
                         // break
                         this.setSpeed();
+                        this.players.push(new Player());    // P1
+                        this.players.push(new Player());    // P2
+                
+                        console.log(this.max1);
+                        console.log(this.max2);
+                        this.players[0].init(this, 0, this.max1);
+                        this.players[1].init(this, 1, this.max2);
+                        this.adjustDimensions();
+    
+                        this.update();
+                        
+                        window.addEventListener(Runner.events.RESIZE,
+                        this.debounceResize.bind(this));
                     }
                   }
                   else {
                     this.taskElement.childNodes[0].replaceWith(document.createTextNode(detections.length+" faces detected."));
                   }
-                }, 1000)
+                }, 25000)
               })
             this.video.addEventListener('play', () => {
                 const vid_canvas = faceapi.createCanvasFromMedia(this.video)
@@ -666,23 +679,6 @@
                 //   faceapi.draw.drawFaceLandmarks(vid_canvas, resizedDetections)
                 //   faceapi.draw.drawFaceExpressions(vid_canvas, resizedDetections)
                 }, 300)
-                this.players.push(new Player());    // P1
-                this.players.push(new Player());    // P2
-                while(this.max1 == -1 || this.max2 == -1) {} // wait
-                console.log(this.max1);
-                console.log(this.max2);
-                this.players[0].init(this, 0, this.max1);
-                this.players[1].init(this, 1, this.max2);
-                this.adjustDimensions();
-    
-                if (IS_MOBILE) {
-                    this.createTouchController();
-                }
-    
-                this.update();
-    
-                window.addEventListener(Runner.events.RESIZE,
-                    this.debounceResize.bind(this));
               })
         },
 
